@@ -111,48 +111,64 @@ def evaluate_policy():
 
         if change < threshold:
             print("Evaluation completed; moving to greedification")
-            greedify()
             break
+
+def policy_update(action, state_considered):
+
+    outcomes_of_action = determine_possible_states(action, state_considered)
+    reward_current_action = outcomes_of_action[0]
+    value_new_state = outcomes_of_action[1].value
+
+    value_of_action = reward_current_action + discount_factor * value_new_state
+
+    return value_of_action
 
 def greedify():
 
-    # Following pseudocode of Sutton & Barto p. 65
-
-    policy_stable = True
-
-    for row in range(grid_rows+1):
-        for column in range(grid_columns+1):
-
-            state_considered = grid[row][column]
-
-            old_policy = state_considered.policy
-
-            value_of_action = -1000000000000
-
-            np.random.shuffle(policy) # dit breekt het hele ding, waarom?
-
-            for action in policy:
-
-                outcomes_of_action = determine_possible_states(action, state_considered)
-
-                reward = outcomes_of_action[0]
-
-                if reward > value_of_action:
-                    value_of_action = reward
-                    new_policy = action
-
-            state_considered.policy = new_policy
-
-            if new_policy != old_policy:
-                policy_stable = False
-
-    if policy_stable:
-        print("The policy has stabilized")
-        print_grid(grid)
-
-    else:
+    while True:
         evaluate_policy()
 
+        # Following pseudocode of Sutton & Barto p. 65
+
+        policy_stable = True
+
+        # consider each state
+        for row in range(grid_rows+1):
+
+            for column in range(grid_columns+1):
+
+                state_considered = grid[row][column]
+
+                # the action taken using the current policy
+                old_policy = state_considered.policy
+
+                # the value of this action
+                if old_policy == "random":
+                    value_of_action = -1000000000000
+                else: # look ahead one step
+                    value_of_action = state_considered.value #policy_update(old_policy, state_considered)
+
+
+                new_policy = old_policy
+
+                #np.random.shuffle(policy) # dit breekt het hele ding, waarom?
+
+                for action in policy:
+
+                    reward = policy_update(action, state_considered)
+
+                    if reward > value_of_action:
+                        value_of_action = reward
+                        new_policy = action
+
+                state_considered.policy = new_policy
+
+                if new_policy != old_policy:
+                    policy_stable = False
+
+        if policy_stable:
+            print("The policy has stabilized")
+            break
 
 
 def print_grid(grid):
@@ -172,11 +188,21 @@ def print_grid_policies(grid):
 
 
 
+def main():
+
+    grid = initialize_grid(grid_rows, grid_columns)
+
+    # Policy evaluation
+    print("Policy evaluation of a random probabilistic policy")
+    evaluate_policy()
+    print_grid(grid)
+
+    # Policy iteration
+    print("Turning the policy into a greedy one")
+    greedify()
+    print_grid(grid)
+    print_grid_policies(grid)
 
 
-
-
-grid = initialize_grid(grid_rows, grid_columns)
-evaluate_policy()
-print_grid(grid)
-print_grid_policies(grid)
+if __name__ == '__main__':
+    main()
