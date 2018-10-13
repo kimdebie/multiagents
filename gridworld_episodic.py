@@ -4,7 +4,7 @@ import random
 grid_columns = 4
 grid_rows = 4
 
-discount_factor = 0.9
+discount_factor = 1.0
 threshold = 0.00000000001
 policy = ["N", "E", "W", "S"]
 
@@ -33,7 +33,18 @@ class State():
     def __str__(self):
         return str(self.value)
 
-def determine_possible_states(action, state_considered, gametype):
+def determine_possible_states(action, state_considered):
+
+    # The absorbing states
+
+    if state_considered.position == [0, 1]:
+        new_state = grid[0][1]
+        reward = 0
+        return [reward, new_state]
+    elif state_considered.position == [0, 3]:
+        new_state = grid[0][3]
+        reward = 0
+        return [reward, new_state]
 
     if action == "N":
         move_to = np.add(state_considered.position, [-1, 0])
@@ -44,38 +55,16 @@ def determine_possible_states(action, state_considered, gametype):
     elif action == "E":
         move_to = np.add(state_considered.position, [0, 1])
 
-    # The special moves in infinite vs episodic games
-    if gametype == 'infinite':
-        if state_considered.position == [0, 1]:
-            new_state = grid[4][1]
-            reward = 10
-            return [reward, new_state]
-        elif state_considered.position == [0, 3]:
-            new_state = grid[2][3]
-            reward = 5
-            return [reward, new_state]
 
-    elif gametype == 'episodic':
-        if state_considered.position == [0, 1]:
-            new_state = grid[0][1]
-            reward = 0
-            return [reward, new_state]
-        elif state_considered.position == [0, 3]:
-            new_state = grid[0][3]
-            reward = 0
-            return [reward, new_state]
-        elif move_to[0] == 0 and move_to[1] == 1:
-            new_state = grid[0][1]
-            reward = 10
-            return [reward, new_state]
-        elif move_to[0] == 0 and move_to[1] == 3:
-            new_state = grid[0][3]
-            reward = 5
-            return [reward, new_state]
+    # Result of the moves
 
-    # Regular/off-the-grid moves
-
-    if move_to[0] <= 4 and move_to[0] >= 0 and move_to[1] <= 4 and move_to[1] >= 0: # ordinary move
+    if move_to[0] == 0 and move_to[1] == 1:
+        new_state = grid[0][1]
+        reward = 10
+    elif move_to[0] == 0 and move_to[1] == 3:
+        new_state = grid[0][3]
+        reward = 5
+    elif move_to[0] <= 4 and move_to[0] >= 0 and move_to[1] <= 4 and move_to[1] >= 0: # ordinary move
         new_state = grid[move_to[0]][move_to[1]]
         reward = 0
     else: # move impossible
@@ -84,11 +73,7 @@ def determine_possible_states(action, state_considered, gametype):
 
     return [reward, new_state]
 
-def evaluate_policy(gametype='infinite'):
-
-    if gametype == 'episodic':
-        global discount_factor
-        discount_factor = 1.0
+def evaluate_policy():
 
     # Following pseudocode of Barto & Sutton p. 63
 
@@ -115,7 +100,7 @@ def evaluate_policy(gametype='infinite'):
 
                 for action in possible_policies:
 
-                    outcomes_of_action = determine_possible_states(action, state_considered, gametype)
+                    outcomes_of_action = determine_possible_states(action, state_considered)
 
                     reward = outcomes_of_action[0]
                     value_new_state = outcomes_of_action[1].value
@@ -127,11 +112,12 @@ def evaluate_policy(gametype='infinite'):
                 state_considered.value = updated_value
 
         if change < threshold:
+            print("Evaluation completed; moving to greedification")
             break
 
-def policy_update(action, state_considered, gametype):
+def policy_update(action, state_considered):
 
-    outcomes_of_action = determine_possible_states(action, state_considered, gametype)
+    outcomes_of_action = determine_possible_states(action, state_considered)
     reward_current_action = outcomes_of_action[0]
     value_new_state = outcomes_of_action[1].value
 
@@ -139,14 +125,10 @@ def policy_update(action, state_considered, gametype):
 
     return value_of_action
 
-def greedify(gametype='infinite'):
-
-    if gametype == 'episodic':
-        global discount_factor
-        discount_factor = 1.0
+def greedify():
 
     while True:
-        evaluate_policy(gametype)
+        evaluate_policy()
 
         # Following pseudocode of Sutton & Barto p. 65
 
@@ -166,14 +148,16 @@ def greedify(gametype='infinite'):
                 if old_policy == "random":
                     value_of_action = -1000000000000
                 else: # look ahead one step
-                    value_of_action = state_considered.value
+                    value_of_action = state_considered.value #policy_update(old_policy, state_considered)
 
 
                 new_policy = old_policy
 
+                #np.random.shuffle(policy) # dit breekt het hele ding, waarom?
+
                 for action in policy:
 
-                    reward = policy_update(action, state_considered, gametype)
+                    reward = policy_update(action, state_considered)
 
                     if reward > value_of_action:
                         value_of_action = reward
@@ -185,6 +169,7 @@ def greedify(gametype='infinite'):
                     policy_stable = False
 
         if policy_stable:
+            print("The policy has stabilized")
             break
 
 
@@ -203,30 +188,20 @@ def print_grid_policies(grid):
             print(" | ", end = '')
         print("")
 
-
 grid = initialize_grid(grid_rows, grid_columns)
+
 
 def main():
 
-    # Policy evaluation for infinite game
-    print("Policy evaluation of a random probabilistic policy in infinity")
+
+    # Policy evaluation
+    print("Policy evaluation of a random probabilistic policy")
     evaluate_policy()
     print_grid(grid)
 
     # Policy iteration
-    print("Turning the policy into a greedy one in infinity")
+    print("Turning the policy into a greedy one")
     greedify()
-    print_grid(grid)
-    print_grid_policies(grid)
-
-    # Policy evaluation for episodic game
-    print("Policy evaluation of the random probabilistic policy in the episodic version of the game")
-    evaluate_policy('episodic')
-    print_grid(grid)
-
-    # Policy iteration episodic
-    print("Policy greedification for the episodic game")
-    greedify('episodic')
     print_grid(grid)
     print_grid_policies(grid)
 
