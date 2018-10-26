@@ -74,7 +74,7 @@ class Action():
 
 def initialize_grid(grid_rows, grid_columns):
 
-    '''Initialize a grid for the gridworld game, including snakepit and treasure'''
+    '''Initialize a grid for the cliffwalking game, including cliff and goal state'''
 
     grid = []
 
