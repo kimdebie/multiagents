@@ -9,6 +9,7 @@ import numpy as np
 import random
 import math
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Specify grid size
 grid_columns = 7
@@ -26,10 +27,7 @@ threshold = 0.00000000001
 actions = ["N", "E", "W", "S"]
 episodes = 1000
 
-# storing performance statistics
-change_per_episode_qlearning = []
-change_per_episode_sarsa = []
-
+grid = []
 
 class State():
 
@@ -101,6 +99,10 @@ def perform_sarsa():
 
     time = 1
 
+    # performance statistics
+    change_per_episode_sarsa = []
+    reward_per_episode_sarsa = []
+
     while time < episodes:
 
         # select a random starting state (that is not inside a wall!)
@@ -113,6 +115,7 @@ def perform_sarsa():
 
         # performance statistics
         change_in_episode = 0
+        reward_sum = 0
 
         # follow policy until treasure is found or snakepit is reached
         while not state.treasure and not state.snakepit:
@@ -123,6 +126,8 @@ def perform_sarsa():
             # observe reward and next state
             next_state = moved[0]
             reward = moved[1]
+
+            reward_sum += reward
 
             # choose new action in new state following an epsilon-greedy policy
             next_action = epsilon_greedy(next_state, time)
@@ -140,8 +145,10 @@ def perform_sarsa():
             action = next_action
 
         change_per_episode_sarsa.append(change_in_episode)
+        reward_per_episode_sarsa.append(reward_sum)
         time += 1
 
+    return(change_per_episode_sarsa, reward_per_episode_sarsa)
 
 
 def perform_qlearning():
@@ -149,6 +156,10 @@ def perform_qlearning():
     ''' Performs Q-learning (off-policy TD) to estimate optimal state-action value'''
 
     time = 1
+
+    # performance statistics
+    change_per_episode_qlearning = []
+    reward_per_episode_qlearning = []
 
     while time < episodes:
 
@@ -159,6 +170,7 @@ def perform_qlearning():
 
         # performance statistics
         change_in_episode = 0
+        reward_sum = 0
 
         while not state.treasure and not state.snakepit:
 
@@ -169,6 +181,7 @@ def perform_qlearning():
             moved = move(state, action)
             next_state = moved[0]
             reward = moved[1]
+            reward_sum += reward
 
             # define the exploitative action in the next state
             exploitative_action = exploitative_policy(next_state)
@@ -185,8 +198,10 @@ def perform_qlearning():
             state = next_state
 
         change_per_episode_qlearning.append(change_in_episode)
+        reward_per_episode_qlearning.append(reward_sum)
         time +=1
 
+    return(change_per_episode_qlearning, reward_per_episode_qlearning)
 
 
 def move(state, action):
@@ -318,28 +333,72 @@ def print_SA_values():
 
             print()
 
+def plot_results(results, index, num_plots, plot_rewards=True, title=None, label="run", final_plot=False):
+    #change_smoothed_sarsa = pd.Series(reward_per_episode_sarsa).rolling(smoothing_window, min_periods=smoothing_window).mean()
+
+    num = len(results)
+
+    if plot_rewards:
+        results = [results[i][1] for i in range(num)]
+    else:
+        results = [results[i][0] for i in range(num)]
+
+    mean = [np.mean([results[j][i] for j in range(num)]) for i in range(episodes-1)]
+    std = [np.std([results[j][i] for j in range(num)]) for i in range(episodes-1)]
+
+    epochs = list(range(episodes-1))
+
+    clrs = sns.color_palette("muted", num_plots)
+
+    if title:
+        plt.title(title)
+
+    plt.plot(epochs, mean, label=label, c=clrs[index])
+    #plt.fill_between(epochs, [mean[i]-std[i] for i in range(episodes-1)], [mean[i]+std[i] for i in range(episodes-1)], alpha=0.3, facecolor=clrs[index])
+
+    if final_plot:
+         plt.legend()
+         plt.show()
+
+def run_experiment_sarsa(n=10):
+    global grid
+
+    results = []
+    for i in range(n):
+        grid = initialize_grid(grid_rows, grid_columns)
+        change, rewards = perform_sarsa()
+        extract_optimal_policy()
+        results += [[change, rewards]]
+
+    print_grid(grid)
+    print()
+    return results
+
+def run_experiment_qlearning(n=10):
+    global grid
+
+    results = []
+    for i in range(n):
+        grid = initialize_grid(grid_rows, grid_columns)
+        change, rewards = perform_qlearning()
+        extract_optimal_policy()
+        results += [[change, rewards]]
+
+    print_grid(grid)
+    print()
+    return results
 
 
 if __name__ == '__main__':
     ''' Perform both algorithms consecutively and plot their convergence speed'''
 
-    # For SARSA:
-    grid = initialize_grid(grid_rows, grid_columns)
-    perform_sarsa()
-    extract_optimal_policy()
-    print_grid(grid)
-    #print_SA_values()
+    runs = 1000
 
-    print()
+    results_sarsa = run_experiment_sarsa(n=runs)
+    results_qlearning = run_experiment_qlearning(n=runs)
 
-    # For Q-learning:
-    grid = initialize_grid(grid_rows, grid_columns)
-    perform_qlearning()
-    extract_optimal_policy()
-    print_grid(grid)
-    #print_SA_values()
+    plot_results(results_sarsa, 0, 2, title="Rewards", label="SARSA")
+    plot_results(results_qlearning, 1, 2, label="Q-learning", final_plot=True)
 
-
-    plt.plot(change_per_episode_sarsa)#, 'ro', ms=0.5)
-    plt.plot(change_per_episode_qlearning)#, 'bo', ms=0.5)
-    plt.show()
+    plot_results(results_sarsa, 0, 2, plot_rewards=False, title="Loss", label="SARSA")
+    plot_results(results_qlearning, 1, 2, plot_rewards=False, label="Q-learning", final_plot=True)
