@@ -9,7 +9,7 @@ def is_sampling(n, p, q):
 
     '''
 
-    Importance sampling for estimating E[X^2] of a normal / cosinus 
+    Importance sampling for estimating E[X^2] of a normal / cosinus
     distribution, using random samples from a uniform distribution at a given
     interval.
 
@@ -73,6 +73,9 @@ def is_sampling(n, p, q):
         return 0
 
 def cos_pdf(x):
+
+    ''' Probability distribution function of cosinus function '''
+
     return (1+m.cos(x * m.pi))/2
 
 if __name__== '__main__':
