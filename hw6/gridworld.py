@@ -8,7 +8,9 @@
 import numpy as np
 import random
 import math
+import matplotlib
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 
 # Specify grid size
@@ -238,9 +240,9 @@ def move(state, action):
             next_state = considered_state
 
             if considered_state.snakepit:
-                reward = -10
+                reward = -20
             elif considered_state.treasure:
-                reward = 20
+                reward = 10
             else:
                 reward = -1
 
@@ -352,8 +354,14 @@ def plot_results(results, index, num_plots, plot_rewards=True, title=None, label
 
     if title:
         plt.title(title)
+        plt.xlabel("time $t$")
+        if title == "Sum of rewards per episode":
+            plt.ylabel("sum of rewards")
+        if title == "Sum of loss per episode":
+            plt.ylabel("loss")
 
     plt.plot(epochs, mean, label=label, c=clrs[index])
+
     #plt.fill_between(epochs, [mean[i]-std[i] for i in range(episodes-1)], [mean[i]+std[i] for i in range(episodes-1)], alpha=0.3, facecolor=clrs[index])
 
     if final_plot:
@@ -389,16 +397,41 @@ def run_experiment_qlearning(n=10):
     return results
 
 
+def plot_grid():
+
+    results = np.ones(shape=(grid_rows+1, grid_columns+1)) * -math.inf
+    # consider all states in the grid
+
+    for row in range(grid_rows+1):
+        for column in range(grid_columns+1):
+            state = grid[row][column]
+
+            for action in state.actions:
+                results[row][column] = max(action.value, results[row][column])
+
+            if state.wall or state.snakepit or state.treasure:
+                results[row][column] = np.nan
+
+    fig, ax = plt.subplots()
+    im = ax.imshow(results)
+
+    ax.set_xticklabels(range(grid_rows+2))
+    ax.set_yticklabels(range(grid_columns+2))
+
+    fig.tight_layout()
+    plt.show()
+
 if __name__ == '__main__':
     ''' Perform both algorithms consecutively and plot their convergence speed'''
 
     runs = 1000
 
     results_sarsa = run_experiment_sarsa(n=runs)
+    plot_grid()
     results_qlearning = run_experiment_qlearning(n=runs)
-
-    plot_results(results_sarsa, 0, 2, title="Rewards", label="SARSA")
+    plot_grid()
+    plot_results(results_sarsa, 0, 2, title="Sum of rewards per episode", label="SARSA")
     plot_results(results_qlearning, 1, 2, label="Q-learning", final_plot=True)
 
-    plot_results(results_sarsa, 0, 2, plot_rewards=False, title="Loss", label="SARSA")
+    plot_results(results_sarsa, 0, 2, plot_rewards=False, title="Sum of loss per episode", label="SARSA")
     plot_results(results_qlearning, 1, 2, plot_rewards=False, label="Q-learning", final_plot=True)
