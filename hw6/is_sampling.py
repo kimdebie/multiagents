@@ -9,7 +9,7 @@ def is_sampling(n, p, q):
 
     '''
 
-    Importance sampling for estimating E[X^2] of a normal / cosinus
+    Importance sampling for estimating E[X^2] of a normal / cosine
     distribution, using random samples from a uniform distribution at a given
     interval.
 
@@ -18,7 +18,7 @@ def is_sampling(n, p, q):
     distr = {
         "normal": 1,
         "uniform": 2,
-        "cosinus": 3
+        "cosine": 3
     }
 
     estimate = 0
@@ -42,7 +42,7 @@ def is_sampling(n, p, q):
             for x in X:
                 estimate +=  pow(x,2) * p_x.pdf(x)/q_x.pdf(x)
 
-        # calculate importance sampling with cosinus distribution
+        # calculate importance sampling with cosine distribution
         elif distr[p] == 3:
 
             # set parameters and pdf
@@ -57,7 +57,7 @@ def is_sampling(n, p, q):
                 estimate +=  pow(x,2) * cos_pdf(x)/q_x.pdf(x)
 
         else:
-            print("Distribution of p must be either cosinus or normal")
+            print("Distribution of p must be either cosine or normal")
             return 0
 
         # multiply by inverse of number of samples
@@ -74,11 +74,11 @@ def is_sampling(n, p, q):
 
 def cos_pdf(x):
 
-    ''' Probability distribution function of cosinus function '''
+    ''' Probability distribution function of cosine function '''
 
     return (1+m.cos(x * m.pi))/2
 
 if __name__== '__main__':
     num_samples = 100000
     is_sampling(num_samples,"normal","uniform")
-    is_sampling(num_samples,"cosinus","uniform")
+    is_sampling(num_samples,"cosine","uniform")
